@@ -9,7 +9,7 @@ El sistema experimenta con la interacción entre **percepción sensorial**, **ac
 ## ✨ ¿Qué hace?
 
 - **Java (`CharacterBody.java`):** simula el cuerpo físico del agente. Recibe comandos, ejecuta acciones, percibe el entorno (nivel de luz, proximidad a objetos) y envía feedback emocional.
-- **Python (`Untitled-1.py`):** orquesta la cognición: gestiona el estado afectivo (valencia), el decaimiento emocional, el *momentum*, la saturación conductual y la reconexión automática.
+- **Python (`orchestrator.py`):** orquesta la cognición: gestiona el estado afectivo (valencia), el decaimiento emocional, el *momentum*, la saturación conductual y la reconexión automática.
 - **Rust (`hart_agent/`):** agente cognitivo opcional con **inferencia GGUF real por CPU** (modelo de lenguaje local).
 - **Comunicación:** ambos procesos se comunican por **TCP** usando mensajes **JSON**.
 
@@ -55,13 +55,13 @@ Verás: `[BODY INIT] Cuerpo fisico instanciado y listo para recibir comandos.`
 ### 3. Ejecutar el orquestador cognitivo (Python)
 
 ```sh
-py Untitled-1.py
+py orchestrator.py
 ```
 
 O con modelo GGUF opcional:
 
 ```sh
-py Untitled-1.py --model-path "C:\ruta\a\modelo.gguf"
+py orchestrator.py --model-path "C:\ruta\a\modelo.gguf"
 ```
 
 > 💡 Si aparece `WinError 10061`, el agente Java no está escuchando; asegúrate de que la terminal de Java siga abierta y vuelve a ejecutar Python.
@@ -99,7 +99,7 @@ cargo run --release -- "C:\ruta\a\tu\modelo.gguf"
 ├── CognitiveSocketBridge.java# Puente de comunicación TCP/JSON
 ├── SensoryData.java          # Datos sensoriales
 ├── FeedbackData.java         # Datos de feedback afectivo
-├── Untitled-1.py             # Orquestador cognitivo (Python)
+├── orchestrator.py          # Orquestador cognitivo (Python)
 ├── hart_agent/               # Agente cognitivo (Rust + GGUF)
 ├── lib/gson-2.13.1.jar       # Dependencia Gson
 ├── INIT_LIFE.bat             # Lanzador Java + Python

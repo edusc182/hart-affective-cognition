@@ -38,7 +38,7 @@ timeout /t 3 /nobreak
 
 echo.
 echo [3/3] Iniciando orquestador cognitivo Python...
-start "HART Python Orchestrator" cmd /k py Untitled-1.py --port !PORT!
+start "HART Python Orchestrator" cmd /k py orchestrator.py --port !PORT!
 
 echo.
 echo ============================================================
