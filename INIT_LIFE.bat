@@ -17,7 +17,8 @@ echo          INIT_LIFE: HART CONSCIOUSNESS MODEL
 echo ============================================================
 echo.
 echo [1/3] Compilando agente Java...
-javac -cp ".;lib\gson-2.13.1.jar" CharacterBody.java CognitiveSocketBridge.java SensoryData.java FeedbackData.java
+cd /d "%~dp0java_body"
+javac -cp ".;..\lib\gson-2.13.1.jar" *.java
 
 if errorlevel 1 (
     echo.
@@ -31,14 +32,16 @@ echo [OK] Compilacion exitosa.
 echo [INFO] Puerto seleccionado: !PORT!
 echo.
 echo [2/3] Iniciando CharacterBody (agente fisico)...
-start "HART CharacterBody" cmd /k java -cp ".;lib\gson-2.13.1.jar" CharacterBody !PORT!
+start "HART CharacterBody" cmd /k java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody !PORT!
 
 echo [INFO] Esperando a que Java esté listo (3 segundos)...
 timeout /t 3 /nobreak
 
 echo.
 echo [3/3] Iniciando orquestador cognitivo Python...
+cd /d "%~dp0orchestrator"
 start "HART Python Orchestrator" cmd /k py orchestrator.py --port !PORT!
+cd /d "%~dp0"
 
 echo.
 echo ============================================================

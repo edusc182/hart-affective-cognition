@@ -1,80 +1,116 @@
-# 🧠 Hart Consciousness Model (Simu2)
+# 🧠 Hart Consciousness Model
 
-Simulación cognitiva que integra un **agente físico (Java)**, un **orquestador cognitivo (Python)** y un **agente con IA local (Rust + GGUF)** para modelar comportamiento, emociones y retroalimentación afectiva en tiempo real.
+> **Experimental embodied affective-cognitive architecture** — exploring affect, memory,
+> perception and behavior through a **Java body**, a **Python affective orchestrator**
+> and a local **Rust/GGUF cognitive agent**.
 
-El sistema experimenta con la interacción entre **percepción sensorial**, **acciones físicas** y **estados emocionales**, comunicándose mediante un protocolo robusto **TCP / JSON**.
+> ⚠️ **Nota científica:** este proyecto **no afirma implementar ni reproducir conciencia
+> fenomenológica**. Explora mecanismos computacionales que pueden producir estados
+> internos persistentes, percepción modulada por afecto, cognición y comportamiento.
 
 ---
 
-## ✨ ¿Qué hace?
+## Propósito
 
-- **Java (`CharacterBody.java`):** simula el cuerpo físico del agente. Recibe comandos, ejecuta acciones, percibe el entorno (nivel de luz, proximidad a objetos) y envía feedback emocional.
-- **Python (`orchestrator.py`):** orquesta la cognición: gestiona el estado afectivo (valencia), el decaimiento emocional, el *momentum*, la saturación conductual y la reconexión automática.
-- **Rust (`hart_agent/`):** agente cognitivo opcional con **inferencia GGUF real por CPU** (modelo de lenguaje local).
-- **Comunicación:** ambos procesos se comunican por **TCP** usando mensajes **JSON**.
+Simulador cognitivo que integra **procesos separados** (cognitivo y encarnado) que se
+comunican por **TCP/JSON** y modelan la interacción entre percepción, acciones y emoción.
+El valor está en la **arquitectura** y en los **experimentos reproducibles** que la acompañan.
+
+## Arquitectura
+
+```text
+┌──────────────────────┐
+│      GGUF / LLM      │
+│    Rust / llama.cpp  │
+└──────────┬───────────┘
+           │
+      COGNICIÓN
+           │
+           ▼
+┌──────────────────┐        ┌──────────────────────┐
+│   JAVA BODY      │  TCP   │  PYTHON ORCHESTRATOR │
+│                  │◄──────►│                      │
+└────────┬─────────┘  JSON  └──────────┬───────────┘
+         │                             │
+         │ percepción                  ▼
+    ┌───────────┐              ┌─────────────┐
+    │  Entorno  │              │  Afecto     │
+    │  simulado │              │  + memoria  │
+    └───────────┘              └──────┬──────┘
+                                      ▼
+                            ┌─────────────────┐
+                            │ motor + sensors │
+                            └────────┬────────┘
+                                     ▼
+                                   JAVA
+```
+
+## Componentes
+
+- **JAVA BODY — `java_body/`:** simula el cuerpo: percibe (luz, proximidad), ejecuta
+  acciones y envía feedback afectivo. Su ritmo de ciclo se modula por el *motor*.
+- **PYTHON ORCHESTRATOR — `orchestrator/`:** gestiona el estado afectivo (valencia), el
+  *momentum* (inercia histórica), la habituación y la saturación conductual. Decide
+  comandos y los modula con `motorOutput` (velocidad) y `sensorSensitivity`
+  (amplitud de percepción).
+- **RUST HART_AGENT — `hart_agent/`:** agente cognitivo con inferencia **GGUF real en
+  CPU**. Separa **cerebro** (inferencia *event-driven*) y **cuerpo** (heartbeat ~60 Hz),
+  y trata al LLM como componente **no confiable** (`fallback_response`, parseo JSON defensivo).
 
 ### La "paradoja emocional realista"
 
-Una de las ideas centrales del modelo: el estado emocional modula el *tempo* del ciclo de procesamiento.
-
-| Estado | Velocidad de procesamiento | Percepción sensorial |
-|--------|----------------------------|----------------------|
-| 🫣 Asustado | **Lenta** (analiza amenazas) | **Alta** (hipervigilancia) |
-| 😌 Confiado | **Rápida** (explora) | **Baja** (atención relajada) |
+| Estado | Velocidad (motor) | Percepción (sensibilidad) |
+|--------|-------------------|---------------------------|
+| 🫣 Asustado | **Baja** (conserva energía) | **Alta** (hipervigilancia) |
+| 😌 Confiado | **Alta** (explora) | **Baja** (no se distrae) |
 
 Ciclo completo: **emoción → cognición → acción → percepción → emoción**.
 
----
+## 📊 Experimentos
 
-## 🛠️ Requisitos previos
+Dentro de [`experiments/`](experiments/) hay estudios reproducibles que demuestran
+que las dinámicas programadas producen comportamientos **medibles y distintos**:
 
-- **Java 8+** (compilar y ejecutar `CharacterBody.java`)
-- **Python 3.10+** (recomendado 3.13)
-- **Rust + Cargo** (para `hart_agent`)
-- *(Opcional)* `llama_cpp` para IA avanzada en Python, o un modelo GGUF para Rust
-- **Gson** (`lib/gson-2.13.1.jar`) para el agente Java
+- [`fear_response.md`](experiments/fear_response.md) — valencia baja → *lento pero vigilante*
+- [`exploration_response.md`](experiments/exploration_response.md) — valencia alta → *rápido, poco distraído*
+- [`habituation.md`](experiments/habituation.md) — confort sostenido → aburrimiento → nueva acción
+- [`affective_momentum.md`](experiments/affective_momentum.md) — inercia y decaimiento emocional
 
----
+Cada experimento documenta **estímulo → parámetros del código → secuencia proyectada de
+estados → comportamiento resultante → cómo reproducirlo**.
+
+## 🛠️ Requisitos
+
+- **Java 8+**
+- **Python 3.10+**
+- **Rust + Cargo** *(para `hart_agent`)*
+- **Gson** — `lib/gson-2.13.1.jar`
+- *(Opcional)* modelo **GGUF** (ver [`models/`](models/README.md)) para IA local
 
 ## 🚀 Cómo ejecutar
 
-### 1. Compilar el agente Java
+### Agente Java + orquestador Python
 
 ```sh
-javac -cp ".;lib\gson-2.13.1.jar" CharacterBody.java CognitiveSocketBridge.java SensoryData.java FeedbackData.java
-```
+# terminal 1
+cd java_body
+javac -cp ".;..\lib\gson-2.13.1.jar" *.java
+java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody
 
-### 2. Ejecutar el agente Java
-
-```sh
-java -cp ".;lib\gson-2.13.1.jar" CharacterBody
-```
-
-Verás: `[BODY INIT] Cuerpo fisico instanciado y listo para recibir comandos.`
-
-### 3. Ejecutar el orquestador cognitivo (Python)
-
-```sh
+# terminal 2
+cd orchestrator
 py orchestrator.py
 ```
 
-O con modelo GGUF opcional:
-
-```sh
-py orchestrator.py --model-path "C:\ruta\a\modelo.gguf"
-```
-
-> 💡 Si aparece `WinError 10061`, el agente Java no está escuchando; asegúrate de que la terminal de Java siga abierta y vuelve a ejecutar Python.
-
-### 4. Inicio automático (doble clic)
+O con un solo clic:
 
 ```sh
 INIT_LIFE.bat
 ```
 
-Compila Java, detecta un puerto libre entre 5050–5100 e inicia Java y Python con el mismo puerto para evitar conflictos.
+*(detecta puerto libre 5050–5100 y arranca ambos procesos).*
 
-### 5. Agente Rust con inferencia GGUF (opcional)
+### Agente cognitivo Rust (opcional)
 
 ```sh
 cd hart_agent
@@ -82,73 +118,35 @@ set HART_GGUF_PATH="C:\ruta\a\tu\modelo.gguf"
 cargo run --release
 ```
 
-O pasando el modelo por argumento:
-
-```sh
-cargo run --release -- "C:\ruta\a\tu\modelo.gguf"
-```
-
-> Carga el modelo GGUF en CPU, lanza un hilo de cerebro (inferencia) y un hilo de cuerpo (latido a 60 Hz). Si el modelo no responde JSON válido, se aplica un fallback cognitivo seguro.
-
----
-
 ## 🧩 Estructura del proyecto
 
 ```
-├── CharacterBody.java        # Agente físico (Java)
-├── CognitiveSocketBridge.java# Puente de comunicación TCP/JSON
-├── SensoryData.java          # Datos sensoriales
-├── FeedbackData.java         # Datos de feedback afectivo
-├── orchestrator.py          # Orquestador cognitivo (Python)
-├── hart_agent/               # Agente cognitivo (Rust + GGUF)
-├── lib/gson-2.13.1.jar       # Dependencia Gson
-├── INIT_LIFE.bat             # Lanzador Java + Python
-└── INIT_LIFE2.bat            # Lanzador agente Rust
+├── java_body/        # Agente físico (Java): CharacterBody, CognitiveSocketBridge, ...
+├── orchestrator/     # Orquestador cognitivo (Python): orchestrator.py
+├── hart_agent/       # Agente cognitivo (Rust + GGUF)
+├── models/           # Documentación de modelos GGUF (no subir archivos)
+├── experiments/      # Experimentos reproducibles documentados
+├── docs/             # Arquitectura y notas
+│   ├── architecture.md
+│   └── ARCHITECTURAL_NOTES.md
+├── lib/gson-2.13.1.jar
+├── INIT_LIFE.bat     # Lanzador Java + Python
+├── INIT_LIFE2.bat    # Lanzador agente Rust (+ libclang/CMake)
+├── BUILD_HART.bat    # Compila hart_agent
+├── README.md
+└── LICENSE
 ```
 
----
+## 📚 Documentación
 
-## 🔬 ¿Para qué sirve?
+- [`docs/architecture.md`](docs/architecture.md) — componentes, cerebro/cuerpo y LLM no confiable.
+- [`docs/ARCHITECTURAL_NOTES.md`](docs/ARCHITECTURAL_NOTES.md) — notas del modelo de conciencia y rutas de mejora.
 
-- **Investigación en cognición artificial y emociones.**
-- **Simulación de agentes autónomos con feedback emocional.**
-- **Experimentación con protocolos robustos de comunicación entre lenguajes** (Java ↔ Python ↔ Rust).
-- **Base para sistemas de IA encarnada, robótica o videojuegos con emociones realistas.**
+## ⚠️ Notas técnicas
 
----
-
-## 📚 Documentación adicional
-
-- [`ARCHITECTURAL_NOTES.md`](ARCHITECTURAL_NOTES.md) — notas sobre la arquitectura, el modelo de conciencia y rutas de mejora (p. ej. flujo bidireccional de la valencia afectiva hacia las decisiones de Java).
-
----
-
-## ⚠️ Solución de problemas comunes
-
-### `package com.google.gson does not exist`
-Falta Gson en el classpath. Verifica que exista `lib\gson-2.13.1.jar` y usa los comandos de compilación de arriba.
-
-### Rust: `Unable to find libclang (clang.dll / libclang.dll)`
-Falta LLVM/Clang (requerido por `bindgen` en `llama-cpp-sys-2`).
-
-1. Instala LLVM desde <https://releases.llvm.org/download.html>.
-2. Verifica `C:\Program Files\LLVM\bin\libclang.dll`.
-3. En la terminal de compilación:
-
-```sh
-set "LIBCLANG_PATH=C:\Program Files\LLVM\bin"
-set "PATH=%LIBCLANG_PATH%;%PATH%"
-```
-
-4. Reintenta:
-
-```sh
-cargo clean
-cargo run --release -- "C:\ruta\a\tu\modelo.gguf"
-```
-
----
+- **No subir** `hart_agent/target/`, `Modelo GGUF/` ni `*.class`: están en `.gitignore`.
+- Los modelos GGUF son **grandes** → solo se documentan en [`models/`](models/README.md).
 
 ## 📄 Licencia
 
-Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE).
+Distribuido bajo la licencia **MIT**. Consulta [`LICENSE`](LICENSE).
