@@ -1,0 +1,14 @@
+{
+  "name": "affective_momentum",
+  "description": "Alternating affective impulses under medium light. Demonstrates momentum/inertia blending and decay of valence across cycles.",
+  "category": "affective_dynamics",
+  "llm": "disabled",
+  "seed": 21,
+  "initial_state": { "affective_valence": 0.0, "affective_momentum": 0.0 },
+  "stimulus": {
+    "light_level": ["Medio", "Medio", "Medio", "Medio", "Medio", "Medio"],
+    "distance": [1.5, 1.5, 1.5, 1.5, 1.5, 1.5],
+    "affective_change": [0.30, 0.0, 0.0, -0.30, 0.0, 0.0]
+  },
+  "cycles": 6
+}

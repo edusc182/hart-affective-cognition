@@ -102,14 +102,17 @@ class CognitiveSocketBridge implements Closeable {
             return;
         }
 
-        writeMessage(new FeedbackMessage(
+                writeMessage(new FeedbackMessage(
                 "feedback",
                 sequence,
                 perception.getLightLevel(),
                 perception.getProximityToObjectMeters(),
                 feedback.getActionTaken(),
                 feedback.getAffectiveChange(),
-                feedback.getRationale()));
+                feedback.getRationale(),
+                feedback.getSaturationFactor(),
+                feedback.getRepeatCount(),
+                feedback.getSwitchRate()));
     }
 
     private void writeMessage(Object payload) throws IOException {
@@ -235,7 +238,7 @@ class CognitiveSocketBridge implements Closeable {
         private Double sensorSensitivity;
     }
 
-    private static final class FeedbackMessage {
+        private static final class FeedbackMessage {
         private final String type;
         private final long sequence;
         private final String lightLevel;
@@ -243,6 +246,9 @@ class CognitiveSocketBridge implements Closeable {
         private final String actionTaken;
         private final double affectiveChange;
         private final String rationale;
+        private final double saturationFactor;
+        private final int repeatCount;
+        private final double switchRate;
 
         private FeedbackMessage(String type,
                 long sequence,
@@ -250,7 +256,10 @@ class CognitiveSocketBridge implements Closeable {
                 double proximityToObjectMeters,
                 String actionTaken,
                 double affectiveChange,
-                String rationale) {
+                String rationale,
+                double saturationFactor,
+                int repeatCount,
+                double switchRate) {
             this.type = type;
             this.sequence = sequence;
             this.lightLevel = lightLevel;
@@ -258,6 +267,9 @@ class CognitiveSocketBridge implements Closeable {
             this.actionTaken = actionTaken;
             this.affectiveChange = affectiveChange;
             this.rationale = rationale;
+            this.saturationFactor = saturationFactor;
+            this.repeatCount = repeatCount;
+            this.switchRate = switchRate;
         }
     }
 }

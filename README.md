@@ -71,68 +71,120 @@ Ciclo completo: **emoción → cognición → acción → percepción → emoci�
 Dentro de [`experiments/`](experiments/) hay estudios reproducibles que demuestran
 que las dinámicas programadas producen comportamientos **medibles y distintos**:
 
-- [`fear_response.md`](experiments/fear_response.md) — valencia baja → *lento pero vigilante*
-- [`exploration_response.md`](experiments/exploration_response.md) — valencia alta → *rápido, poco distraído*
-- [`habituation.md`](experiments/habituation.md) — confort sostenido → aburrimiento → nueva acción
-- [`affective_momentum.md`](experiments/affective_momentum.md) — inercia y decaimiento emocional
+- [`fear_response.md`](experiments/docs/fear_response.md) — valencia baja → *lento pero vigilante*
+- [`exploration_response.md`](experiments/docs/exploration_response.md) — valencia alta → *rápido, poco distraído*
+- [`habituation.md`](experiments/docs/habituation.md) — confort sostenido → aburrimiento → nueva acción
+- [`affective_momentum.md`](experiments/docs/affective_momentum.md) — inercia y decaimiento emocional
 
 Cada experimento documenta **estímulo → parámetros del código → secuencia proyectada de
 estados → comportamiento resultante → cómo reproducirlo**.
 
 ## 🛠️ Requisitos
 
-- **Java 8+**
-- **Python 3.10+**
-- **Rust + Cargo** *(para `hart_agent`)*
-- **Gson** — `lib/gson-2.13.1.jar`
-- *(Opcional)* modelo **GGUF** (ver [`models/`](models/README.md)) para IA local
+| Componente | Requisito |
+|-----------|-----------|
+| **Runner de experimentos** (recomendado) | **Python 3.10+** (solo stdlib) |
+| **Agente físico (Java)** | **Java 8+** + [Gson](https://github.com/google/gson) |
+| **Agente cognitivo (Rust)** | **Rust + Cargo** *(opcional)* |
+| **IA local (GGUF)** | *Opcional* — ver [`models/`](models/README.md) |
+
+El `.jar` de Gson ya viene incluido en `lib/gson-2.13.1.jar`. El núcleo de
+Python usa la biblioteca estándar; `matplotlib` y `llama-cpp-python` son
+**opcionales** (ver [`requirements.txt`](requirements.txt)).
 
 ## 🚀 Cómo ejecutar
 
-### Agente Java + orquestador Python
+### Opción A — Windows (doble clic)
 
 ```sh
-# terminal 1
+INIT_LIFE.bat     # compila Java y arranca Java + Python (puerto libre 5050–5100)
+INIT_LIFE2.bat    # además lanza el agente Rust (si tienes un modelo GGUF)
+```
+
+### Opción B — Linux / macOS (consola)
+
+```bash
+./setup.sh        # compila java_body y crea .venv/ (una vez)
+```
+
+Después, en dos terminales:
+
+```sh
+# Terminal 1 — cuerpo Java
 cd java_body
-javac -cp ".;..\lib\gson-2.13.1.jar" *.java
-java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody
+javac -cp ".:../lib/gson-2.13.1.jar" -d classes *.java
+java -cp ".:../lib/gson-2.13.1.jar:classes" CharacterBody 5050
 
-# terminal 2
-cd orchestrator
-py orchestrator.py
+# Terminal 2 — orquestador cognitivo
+cd ../orchestrator
+python orchestrator.py --port 5050
 ```
 
-O con un solo clic:
+> Nota: en Windows el separador de classpath es `;` ; en Linux/macOS es `:`.
+> Alternativa sin ventanas: `setup.sh` + Docker (abajo).
+
+### Opción C — Docker (reproducible, headless)
+
+```bash
+docker build -f Dockerfile -t hart-console .
+docker run --rm hart-console                      # reproduce TODOS los experiments
+docker run --rm hart-console --experiment fear_response
+```
+
+### Reproducir los experimentos (sin Java ni Rust)
+
+El runner mide el orquestador **real** (no lo reimplementa) y deja CSV + summary en
+`experiments/results/`:
 
 ```sh
-INIT_LIFE.bat
+python3 tools/run_experiments.py --all                 # todos, con gráficas
+python3 tools/run_experiments.py --experiment habituation --no-plots
 ```
 
-*(detecta puerto libre 5050–5100 y arranca ambos procesos).*
-
-### Agente cognitivo Rust (opcional)
+### Agente cognitivo Rust (opcional, IA local)
 
 ```sh
 cd hart_agent
-set HART_GGUF_PATH="C:\ruta\a\tu\modelo.gguf"
+set HART_GGUF_PATH="C:\ruta\a\tu\modelo.gguf"  # Linux: export HART_GGUF_PATH=...
 cargo run --release
+```
+
+## 📡 Telemetría del cuerpo (opcional)
+
+El feedback de Java incluye `saturationFactor`, `repeatCount` y `switchRate`
+(saturación conductual por repetición y persistencia temporal). Se exponen siempre
+en el JSON de feedback; para además emitir una línea aislada por ciclo, arranca el
+JVM con el flag:
+
+```bash
+java -DHART_TELEMETRY=true -cp ".:../lib/gson-2.13.1.jar:classes" CharacterBody
 ```
 
 ## 🧩 Estructura del proyecto
 
-```
-├── java_body/        # Agente físico (Java): CharacterBody, CognitiveSocketBridge, ...
-├── orchestrator/     # Orquestador cognitivo (Python): orchestrator.py
-├── hart_agent/       # Agente cognitivo (Rust + GGUF)
-├── models/           # Documentación de modelos GGUF (no subir archivos)
-├── experiments/      # Experimentos reproducibles documentados
-├── docs/             # Arquitectura y notas
+```text
+├── java_body/          # Agente físico (Java): CharacterBody, CognitiveSocketBridge, ...
+├── orchestrator/       # Orquestador cognitivo (Python): orchestrator.py
+├── hart_agent/         # Agente cognitivo (Rust + GGUF)
+├── tools/              # Runner reproducible de experiments (run_experiments.py)
+├── models/             # Documentación de modelos GGUF (no subir archivos)
+├── experiments/
+│   ├── configs/        # Estímulos reproducibles (JSON)
+│   ├── docs/           # Informes de cada experimento (MD)
+│   └── results/        # CSV + PNG generados localmente (ignorado por git)
+├── docs/               # Arquitectura y notas
 │   ├── architecture.md
 │   └── ARCHITECTURAL_NOTES.md
 ├── lib/gson-2.13.1.jar
-├── INIT_LIFE.bat     # Lanzador Java + Python
-├── INIT_LIFE2.bat    # Lanzador agente Rust (+ libclang/CMake)
-├── BUILD_HART.bat    # Compila hart_agent
+├── INIT_LIFE.bat       # Lanzador Java + Python (Windows)
+├── INIT_LIFE2.bat      # Lanzador agente Rust (+ libclang/CMake)
+├── BUILD_HART.bat      # Compila hart_agent
+├── setup.sh            # Preparación Linux/macOS
+├── Dockerfile          # Entorno headless reproducible (experimentos)
+├── requirements.txt    # Dependencias Python opcionales
+├── .gitattributes      # Normalización de fin de línea
+├── .dockerignore
+├── CONTRIBUTING.md
 ├── README.md
 └── LICENSE
 ```
@@ -146,6 +198,20 @@ cargo run --release
 
 - **No subir** `hart_agent/target/`, `Modelo GGUF/` ni `*.class`: están en `.gitignore`.
 - Los modelos GGUF son **grandes** → solo se documentan en [`models/`](models/README.md).
+
+## 🚀 Roadmap / Ideas
+
+- **Portátil total**: CI en GitHub Actions que compile Java (`javac`), Rust (`cargo build`) y
+  ejecute `tools/run_experiments.py --all` para validar que los CSVs siguen siendo estables.
+- **Versión GUI**: `SimulationWindow` (Java) ya existe; mejorarlo como visualizador del estado.
+- **Más experimentos**: cualquier dinámica afectiva nueva merece un `experiments/configs/*.json`.
+- **Servidor de telemetría**: `AffectiveTelemetryUDP` puede alimentar dashboards en vivo.
+
+## 🤝 Contribuir
+
+Lee **[`CONTRIBUTING.md`](CONTRIBUTING.md)**: cómo probar, convenciones de commit
+(inglés, imperativo) y las reglas de oro (medir el sistema real, no reescribirlo;
+telemetría opt-in; no subir binarios/GGUF).
 
 ## 📄 Licencia
 

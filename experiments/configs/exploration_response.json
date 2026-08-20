@@ -1,0 +1,14 @@
+{
+  "name": "exploration_response",
+  "description": "Bright environment + nearby object, positive affective pressure. Projects exploration: valence up, motor up, sensitivity down.",
+  "category": "affective_dynamics",
+  "llm": "disabled",
+  "seed": 7,
+  "initial_state": { "affective_valence": 0.10, "affective_momentum": 0.0 },
+  "stimulus": {
+    "light_level": ["Alto", "Alto", "Alto", "Alto"],
+    "distance": [0.8, 0.6, 0.9, 0.5],
+    "affective_change": [0.10, 0.20, 0.18, 0.30]
+  },
+  "cycles": 4
+}

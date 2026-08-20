@@ -1,9 +1,12 @@
 # ===== Java =====
 *.class
+java_body/classes/
 
 # ===== Python =====
 __pycache__/
 *.py[cod]
+.venv/
+*.egg-info/
 
 # ===== Rust (artefactos de compilación) =====
 hart_agent/target/
@@ -14,3 +17,8 @@ Modelo GGUF/
 # ===== Sistema / editor =====
 .DS_Store
 Thumbs.db
+
+# ===== Experimentos (resultados generados localmente) =====
+experiments/results/
+tools/__pycache__/
+

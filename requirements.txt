@@ -1,0 +1,13 @@
+# ============================================================
+# Hart Console — dependencias PYTHON
+# ============================================================
+# El NÚCLEO (orquestador + runner de experiments) usa SOLO la
+# biblioteca estándar (argparse, json, socket, pathlib, csv...).
+# Instala estas dependencias OPCIONALES solo si las necesitas:
+
+# Graficos de experimentos (tools/run_experiments.py) — recomendado.
+matplotlib>=3.5
+
+# Inferencia GGUF local desde Python (alternativa ligera al agente Rust).
+#   instala solo si quieres IA local en el orquestador Python:
+#   llama-cpp-python>=0.2.0

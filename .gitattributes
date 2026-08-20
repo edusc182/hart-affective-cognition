@@ -1,0 +1,25 @@
+# ============================================================
+# .gitattributes — normalizacion de lineas para equipos mixtos.
+# ============================================================
+
+# Auto-deteccion (guarda el tipo correcto en el indice).
+* text=auto
+
+# Scripts de Windows: deben quedarse con CRLF en su copia de trabajo.
+*.bat text eol=crlf
+
+# Scripts Unix y fuentes: LF.
+*.sh  text eol=lf
+*.py  text eol=lf
+*.java text eol=lf
+*.rs  text eol=lf
+*.md  text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+
+# Binarios: no tocar.
+*.jar    binary
+*.class  binary
+*.gguf   binary
+*.png    binary
+*.csv    text

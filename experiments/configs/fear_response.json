@@ -1,0 +1,14 @@
+{
+  "name": "fear_response",
+  "description": "Low light + distant object with sustained negative affective pressure. Projects a descent into fear: valence down, sensitivity up, motor down.",
+  "category": "affective_dynamics",
+  "llm": "disabled",
+  "seed": 42,
+  "initial_state": { "affective_valence": -0.20, "affective_momentum": 0.0 },
+  "stimulus": {
+    "light_level": ["Bajo", "Bajo", "Bajo", "Bajo", "Bajo", "Bajo"],
+    "distance": [3.2, 3.0, 3.5, 3.8, 3.1, 3.9],
+    "affective_change": [-0.12, -0.20, -0.25, -0.30, -0.22, -0.28]
+  },
+  "cycles": 6
+}

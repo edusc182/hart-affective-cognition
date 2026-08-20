@@ -1,0 +1,22 @@
+# ============================================================
+# .dockerignore — lo que NO entra en el contenedor (pesados/runtime)
+# ============================================================
+.git
+.gitignore
+.harness
+
+# Modelos GGUF (multi-GB, no se copian).
+Modelo GGUF/
+**/*.gguf
+
+# Artefactos de compilacion / runtime.
+hart_agent/target/
+java_body/classes/
+**/__pycache__/
+**/*.pyc
+**/*.class
+.venv/
+
+# Resultados generados en runtime (se re-escriben).
+experiments/results/
+tools/__pycache__/

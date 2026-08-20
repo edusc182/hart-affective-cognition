@@ -236,8 +236,9 @@ public class CharacterBody implements Runnable {
             rationale = "La accion no altera significativamente la valencia afectiva del cuerpo.";
         }
 
-        // Behavioral saturation: attenuate using repetition + temporal persistence + beta velocity
-        double saturationFactor = computeSaturationFactor(action);
+                // Behavioral saturation: attenuate using repetition + temporal persistence + beta velocity
+        SaturationMetrics sat = computeSaturationMetrics(action);
+        double saturationFactor = sat.factor;
         double attenuatedChange = affectiveChange * saturationFactor;
         String satMsg = saturationFactor < 1.0 ? String.format(Locale.US, " (SATURADO x%.2f)", saturationFactor) : "";
 
@@ -248,15 +249,36 @@ public class CharacterBody implements Runnable {
                 rationale,
                 satMsg));
 
-        return new FeedbackData(action, attenuatedChange, rationale + satMsg);
+        // Telemetria optativa (Fase 3d): linea JSON por feedback cuando -DHART_TELEMETRY=true.
+        if (Boolean.getBoolean("HART_TELEMETRY")) {
+            System.out.println(String.format(Locale.US,
+                    "HART_TELEMETRY {\"action\":\"%s\",\"attenuatedChange\":%.4f,\"saturationFactor\":%.4f,\"repeatCount\":%d,\"switchRate\":%.4f}",
+                    action, attenuatedChange, saturationFactor, sat.repeatCount, sat.switchRate));
+        }
+
+        return new FeedbackData(action, attenuatedChange, rationale + satMsg,
+                saturationFactor, sat.repeatCount, sat.switchRate);
+    }
+
+    /** Metricas de saturacion expuestas para telemetria (Fase 3d). */
+    private static final class SaturationMetrics {
+        final double factor;
+        final int repeatCount;
+        final double switchRate;
+        SaturationMetrics(double factor, int repeatCount, double switchRate) {
+            this.factor = factor;
+            this.repeatCount = repeatCount;
+            this.switchRate = switchRate;
+        }
     }
 
     // Compute saturation using repetition (N), temporal persistence (cycle gaps), and switchRate.
     // High switchRate lowers fatigue because active exploration is less emotionally saturating.
-    private double computeSaturationFactor(String action) {
+    // Refactorizado para exponer tambien repeatCount y switchRate (Fase 3d) sin cambiar la formula.
+    private SaturationMetrics computeSaturationMetrics(String action) {
         synchronized (recentActionEvents) {
             if (recentActionEvents.isEmpty()) {
-                return 1.0;
+                return new SaturationMetrics(1.0, 0, 0.0);
             }
 
             int repeatCount = 0;
@@ -284,11 +306,13 @@ public class CharacterBody implements Runnable {
                 }
             }
 
+            double switchRate = possibleTransitions == 0 ? 0.0 : (double) transitions / possibleTransitions;
+
+            // early-out conservador: sin repeticion significativa no hay atenuacion
             if (repeatCount <= 1) {
-                return 1.0;
+                return new SaturationMetrics(1.0, repeatCount, switchRate);
             }
 
-            double switchRate = possibleTransitions == 0 ? 0.0 : (double) transitions / possibleTransitions;
             double betaContextual = clamp01(1.0 - BETA_VELOCIDAD * switchRate);
 
             // Count-based fatigue: same action repeated more than twice.
@@ -301,8 +325,13 @@ public class CharacterBody implements Runnable {
 
             double totalPenalty = (repetitionPenalty + temporalPenalty) * betaContextual;
             double factor = 1.0 - totalPenalty;
-            return Math.max(0.15, Math.min(1.0, factor));
+            return new SaturationMetrics(Math.max(0.15, Math.min(1.0, factor)), repeatCount, switchRate);
         }
+    }
+
+    // Compatibilidad con llamadores heredados.
+    private double computeSaturationFactor(String action) {
+        return computeSaturationMetrics(action).factor;
     }
 
     private double clamp01(double value) {
