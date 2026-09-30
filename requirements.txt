@@ -11,3 +11,10 @@ matplotlib>=3.5
 # Inferencia GGUF local desde Python (alternativa ligera al agente Rust).
 #   instala solo si quieres IA local en el orquestador Python:
 #   llama-cpp-python>=0.2.0
+
+# ============================================================
+# Dependencias de DESARROLLO (tests) -> ver requirements-dev.txt
+# ============================================================
+# El simulador NO necesita pytest: solo la suite determinista.
+#   pip install -r requirements-dev.txt
+#   python -m pytest tests -q

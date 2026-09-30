@@ -40,12 +40,26 @@ def apply_boredom_drive(self, thought, action):
 
 ## Cómo reproducir
 
-```sh
-# terminal 1 — en java_body/
-java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody
-# terminal 2 — en orchestrator/
+```bat
+REM terminal 1 — en java_body\  (compila a classes\ y arranca el cuerpo)
+javac -cp ..\lib\gson-2.13.1.jar -d classes *.java
+java -cp ".;..\lib\gson-2.13.1.jar;classes" CharacterBody
+REM terminal 2 — en orchestrator\
 py orchestrator.py
 ```
 
 Mantén luz `Alto` y distancia <0.5 m durante varios ciclos y observa el log:
 `[COGNICION] Habituacion detectada: valencia ... -> ...`.
+
+## Resultado medido (2026-09-30, commit `b7026f4`)
+
+`python tools/run_experiments.py --experiment habituation --no-plots` (seed 99, LLM off):
+
+| Ciclos | Valencia final | Momentum | Motor (1→8) | Sensibilidad | Estado final |
+|--------|----------------|----------|-------------|--------------|--------------|
+| 8 | +0.311 | +0.049 | 0.966 → 1.003 | 1.000 (constante) | `curious` |
+
+En el **ciclo 6** se dispara la habituación (sexto ciclo cómodo): la acción pasa a
+`Explorar el entorno buscando nuevos estimulos`, la valencia **baja** respecto al ciclo anterior
+(0.3485 → 0.2374) y `repeat_count` se reinicia a 1. Fijado como regression test en
+[`tests/test_regression_experiments.py`](../../tests/test_regression_experiments.py).

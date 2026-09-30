@@ -49,12 +49,26 @@ El momentum produce **resiliencia**: las transiciones emocionales son **temporal
 
 ## Cómo reproducir
 
-```sh
-# terminal 1 — en java_body/
-java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody
-# terminal 2 — en orchestrator/
+```bat
+REM terminal 1 — en java_body\  (compila a classes\ y arranca el cuerpo)
+javac -cp ..\lib\gson-2.13.1.jar -d classes *.java
+java -cp ".;..\lib\gson-2.13.1.jar;classes" CharacterBody
+REM terminal 2 — en orchestrator\
 py orchestrator.py
 ```
 
 Alimenta impulsos alternados y observa `-- FEEDBACK AFECTIVO --`: fíjate en los campos
 `DeltaAct`, `Inercia` y `DeltaTotal` y en cómo `Valencia` nunca salta de golpe.
+
+## Resultado medido (2026-09-30, commit `b7026f4`)
+
+`python tools/run_experiments.py --experiment affective_momentum --no-plots` (seed 21, LLM off):
+
+| Ciclos | Valencia final | Momentum | Motor (1→6) | Sensibilidad | Estado final |
+|--------|----------------|----------|-------------|--------------|--------------|
+| 6 | +0.060 | −0.052 | 0.954 → 0.909 | 1.000 (constante) | `neutral` |
+
+Trayectoria del momentum (impulsos `+0.30, 0, 0, −0.30, 0, 0`):
+`0.000 → +0.180 → +0.108 → +0.076 → −0.049 → −0.052`, es decir **inercia que decae** cuando deja de
+haber refuerzo. Fijado como regression test en
+[`tests/test_regression_experiments.py`](../../tests/test_regression_experiments.py).

@@ -1,0 +1,109 @@
+# ============================================================
+# CI — verificacion automatica del nucleo (sin GPU y SIN GGUF).
+#
+#   experiments : reproduce los 4 experimentos y valida CSV + summary
+#   tests       : suite determinista del orquestador (pytest)
+#   java        : javac -> java_body/classes (convencion unica)
+#   rust        : cargo check del agente cognitivo
+#
+# Ningun job descarga modelos GGUF (pesan varios GB): el agente Rust se
+# verifica COMPILANDO, no infiriendo.
+# ============================================================
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experiments:
+    name: Python - experimentos reproducibles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reproducir los experimentos (stdlib, sin plots)
+        run: python tools/run_experiments.py --all --no-plots
+      - name: Verificar data.csv + summary.md de cada experimento
+        run: |
+          expected=$(ls -1 experiments/configs/*.json | wc -l)
+          count=0
+          for dir in experiments/results/*/; do
+            test -f "${dir}data.csv"
+            test -f "${dir}summary.md"
+            count=$((count + 1))
+          done
+          test "$count" -eq "$expected"
+          echo "OK: $count experimentos con data.csv + summary.md"
+
+  tests:
+    name: Python - suite determinista (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar pytest
+        run: python -m pip install --upgrade pip pytest
+      - name: Ejecutar la suite
+        run: python -m pytest tests -q
+
+  java:
+    name: Java - compilacion del cuerpo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Compilar a java_body/classes
+        run: |
+          mkdir -p java_body/classes
+          javac -cp "lib/gson-2.13.1.jar" -d java_body/classes java_body/*.java
+      - name: Verificar las clases generadas
+        run: |
+          test -f java_body/classes/CharacterBody.class
+          test -f java_body/classes/CognitiveSocketBridge.class
+          test -f java_body/classes/FeedbackData.class
+      - name: Ningun artefacto de build suelto
+        run: |
+          if ls java_body/*.class >/dev/null 2>&1; then
+            echo "ERROR: .class junto a los .java (compilacion in-place)"; exit 1
+          fi
+          if ls ./*.class >/dev/null 2>&1; then
+            echo "ERROR: .class sueltos en la raiz del repo"; exit 1
+          fi
+          echo "OK: convencion unica de compilacion respetada"
+
+  rust:
+    name: Rust - cargo check del agente
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Herramientas de build (bindgen + cmake)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libclang-dev clang
+      - name: Toolchain estable
+        run: rustup update stable && rustup default stable
+      - name: Cache de cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            hart_agent/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('hart_agent/Cargo.lock') }}
+      - name: cargo check (sin modelo GGUF)
+        working-directory: hart_agent
+        run: cargo check --locked

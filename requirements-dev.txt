@@ -1,0 +1,11 @@
+# ============================================================
+# Hart Console — dependencias de DESARROLLO
+# ============================================================
+# Solo hacen falta para contribuir (tests). El simulador y el runner
+# de experimentos funcionan con la biblioteca estandar de Python.
+#
+#   python -m pip install -r requirements-dev.txt
+#   python -m pytest tests -q
+#
+-r requirements.txt
+pytest>=7.0

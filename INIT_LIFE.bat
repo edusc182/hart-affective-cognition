@@ -17,8 +17,11 @@ echo          INIT_LIFE: HART CONSCIOUSNESS MODEL
 echo ============================================================
 echo.
 echo [1/3] Compilando agente Java...
+REM Convencion oficial unica: las clases se generan en java_body\classes
+REM (nunca junto a las fuentes .java).
 cd /d "%~dp0java_body"
-javac -cp ".;..\lib\gson-2.13.1.jar" *.java
+if not exist "classes" mkdir "classes"
+javac -cp ".;..\lib\gson-2.13.1.jar" -d classes *.java
 
 if errorlevel 1 (
     echo.
@@ -32,7 +35,7 @@ echo [OK] Compilacion exitosa.
 echo [INFO] Puerto seleccionado: !PORT!
 echo.
 echo [2/3] Iniciando CharacterBody (agente fisico)...
-start "HART CharacterBody" cmd /k java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody !PORT!
+start "HART CharacterBody" cmd /k java -cp ".;..\lib\gson-2.13.1.jar;classes" CharacterBody !PORT!
 
 echo [INFO] Esperando a que Java esté listo (3 segundos)...
 timeout /t 3 /nobreak

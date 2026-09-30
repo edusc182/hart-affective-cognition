@@ -30,16 +30,29 @@ estados:  val>0.6 exploratory | >0.2 curious | >−0.2 neutral
 
 1. `observe` → movimiento cauto.
 2. Sensibilidad alta + motor bajo: **escaneo atento pero desplazamiento lento**.
-3. En pánico: máxima vigilancia (`1.8`) con motor mínimo (`0.64`).
+3. En pánico: máxima vigilancia (`1.8`) con motor mínimo (**medido: 0.573**).
 
 ## Cómo reproducir
 
-```sh
-# terminal 1 — en java_body/
-java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody
-# terminal 2 — en orchestrator/
+```bat
+REM terminal 1 — en java_body\  (compila a classes\ y arranca el cuerpo)
+javac -cp ..\lib\gson-2.13.1.jar -d classes *.java
+java -cp ".;..\lib\gson-2.13.1.jar;classes" CharacterBody
+REM terminal 2 — en orchestrator\
 py orchestrator.py
 ```
 
 Somete al agente a condiciones de luz baja con el objeto lejano y observa el descenso de
 valencia en la salida `--- FEEDBACK AFECTIVO ---`.
+
+## Resultado medido (2026-09-30, commit `b7026f4`)
+
+`python tools/run_experiments.py --experiment fear_response --no-plots` (seed 42, LLM off):
+
+| Ciclos | Valencia final | Momentum | Motor (1→6) | Sensibilidad (1→6) | Estado final |
+|--------|----------------|----------|-------------|--------------------|--------------|
+| 6 | **−1.000** (clamp inferior) | −0.223 | 0.821 → **0.573** | 1.000 → **1.800** | `panic_avoidance` |
+
+Estos valores están **fijados como regression test** en
+[`tests/test_regression_experiments.py`](../../tests/test_regression_experiments.py): si cambian,
+hay que actualizar este informe y el test.

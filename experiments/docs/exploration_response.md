@@ -28,19 +28,32 @@ estados: curiosidad moderada → `curious` → `exploratory`
 
 1. `observe` → curiosidad moderada (`curious`).
 2. Al confirmar que es seguro: **exploración activa** (`exploratory`).
-3. Sensibilidad baja (`0.80`): el agente **no se distrae** y avanza rápido (`1.10`).
+3. Sensibilidad baja (`0.80`): el agente **no se distrae** y avanza rápido (medido: `1.123`).
 
 Comparado con el Experimento A, el **mismo estímulo** navega el espacio de estado en la
 dirección opuesta: la valencia positiva **acelera el motor** y **reduce la vigilancia**.
 
 ## Cómo reproducir
 
-```sh
-# terminal 1 — en java_body/
-java -cp ".;..\lib\gson-2.13.1.jar" CharacterBody
-# terminal 2 — en orchestrator/
+```bat
+REM terminal 1 — en java_body\  (compila a classes\ y arranca el cuerpo)
+javac -cp ..\lib\gson-2.13.1.jar -d classes *.java
+java -cp ".;..\lib\gson-2.13.1.jar;classes" CharacterBody
+REM terminal 2 — en orchestrator\
 py orchestrator.py
 ```
 
 Presenta al agente un entorno con luz alta y el objeto cerca, y observa el ascenso de
 valencia y el paso `neutral → curious → exploratory`.
+
+## Resultado medido (2026-09-30, commit `b7026f4`)
+
+`python tools/run_experiments.py --experiment exploration_response --no-plots` (seed 7, LLM off):
+
+| Ciclos | Valencia final | Momentum | Motor (1→4) | Sensibilidad (1→4) | Estado final |
+|--------|----------------|----------|-------------|--------------------|--------------|
+| 4 | +0.644 | +0.135 | 0.947 → **1.123** | 1.000 → **0.800** | `exploratory` |
+
+Estos valores están **fijados como regression test** en
+[`tests/test_regression_experiments.py`](../../tests/test_regression_experiments.py): si cambian,
+hay que actualizar este informe y el test.

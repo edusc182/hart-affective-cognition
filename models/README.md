@@ -29,11 +29,20 @@ cargo run --release -- "C:\ruta\a\tu\modelo.gguf"
 
 ## Modelos probados
 
-> Aquí puedes listar los modelos GGUF que has comprobado, indicando tamaño, idioma y resultado.
+| Modelo | Tamaño | Estado | Notas |
+|--------|--------|--------|-------|
+| MiniCPM-o-4.5 Q4_K_M | ~4 GB | **Presente localmente (no versionado)** | Es el `.gguf` que `INIT_LIFE2.bat` detecta en `Modelo GGUF\`. La inferencia extremo a extremo **no** se ha verificado en la última auditoría; lo único confirmado es que existe el binario de una build previa: `hart_agent/target/release/hart_agent.exe`. |
 
-| Modelo | Tamaño | Notas |
-|--------|--------|-------|
-| *(ejemplo)* Gemma-4-E4B-Uncensored Q4_K_M | ~4 GB | Funciona en CPU; respuestas JSON estables |
+> Añade aquí cada modelo que **ejecutes de verdad**, indicando tamaño, idioma y resultado
+> (si devuelve JSON estable, latencia, si dispara el `fallback_response`).
+> No marques un modelo como "probado" sin haber visto una inferencia real completarse.
+
+## Qué NO está verificado (estado actual)
+
+- Que `hart_agent.exe` + el GGUF local completen una inferencia de principio a fin.
+- Que la salida del modelo pase `extract_first_json_object` sin caer al `fallback_response`
+  (ver [`docs/architecture.md`](../docs/architecture.md)).
+- Cualquier medición de rendimiento (tok/s, RAM) en esta máquina.
 
 ## Recomendaciones
 
