@@ -98,12 +98,14 @@ Python usa la biblioteca estándar; `matplotlib` y `llama-cpp-python` son
 |------|--------|-----------|
 | Runner + 4 experimentos (CSV + summary) | ✅ Probado | `python tools/run_experiments.py --all --no-plots` |
 | Gráficas PNG (`matplotlib`) | ✅ Probado | `experiments/results/habituation/plots/*.png` |
-| Suite de regresión (`pytest tests`) | ✅ Probado | 94 tests recolectados (93 pasan, 1 *skip* documentado) |
+| Suite de regresión (`pytest tests/unit`) | ✅ Probado | 94 tests in-process (93 pasan, 1 *skip* documentado) |
+| Integración **TCP real** Java ↔ Python (Fase 3c) | ✅ Probado (JDK + display) | 8 tests en `tests/integration/` + `tools/run_integration.py` |
+| Telemetría de saturación de Java llegando a Python | ✅ Probado | `saturation_factor` 0.50–1.00 en `experiments/results/integration/*/data.csv` |
 | Compilación Java (`javac` → `java_body/classes`) | ✅ Probado con **JDK 21** | `CharacterBody.class`, `CognitiveSocketBridge.class`, ... |
 | Telemetría de saturación (Fase 3d) | ✅ Implementada (opt-in) | `-DHART_TELEMETRY=true` en `CharacterBody` |
 | Compilación Rust (`hart_agent`) | ⚠️ Binario previo existe; la CI valida `cargo check` | `hart_agent/target/release/hart_agent.exe` |
 | Inferencia GGUF extremo a extremo | ❌ **No verificado** | requiere un modelo local de varios GB |
-| Integración **TCP real** Java ↔ Python | ❌ **No verificado por un test** | protocolo alineado, pero sin prueba automatizada en vivo (**Fase 3c**) |
+| Integración **TCP real** Java ↔ Python | ✅ **Probado** con JDK + display (en CI sin display → *skip* explícito) | `tests/integration/` |
 | Docker (headless) | ❌ No verificado en local (Docker no instalado) | `Dockerfile` |
 | Java 8 (mínimo declarado) | ❌ No verificado | solo se probó JDK 21 |
 
@@ -187,6 +189,21 @@ la trayectoria final de cada experimento y el contrato del protocolo Java↔Pyth
 Si cambias una dinámica a propósito, actualiza los valores esperados en
 `tests/test_regression_experiments.py`.
 
+### 🔌 Integración real Java ↔ Python (Fase 3c)
+
+Prueba de **sistema completo**: lanza `CharacterBody` como proceso externo, habla el protocolo
+TCP/JSON y comprueba que la telemetría de saturación de Java llega a la trayectoria Python.
+
+```sh
+# Requiere JDK + java_body/classes compilado + display
+python -m pytest tests/integration -q
+python tools/run_integration.py --cycles 6      # evidencia en experiments/results/integration/
+```
+
+Criterios explícitos: **display disponible → RUN** · **display ausente → SKIP** (nunca *pass*
+silencioso) · **Java falla → FAIL** · **TCP/protocolo falla → FAIL** · **telemetría ausente → FAIL**.
+La parada del proceso está verificada (no deja JVM, ventana ni puerto huérfano).
+
 ### Agente cognitivo Rust (opcional, IA local)
 
 ```sh
@@ -202,10 +219,13 @@ El feedback de Java incluye `saturationFactor`, `repeatCount` y `switchRate`
 en el JSON de feedback; para además emitir una línea aislada por ciclo, arranca el
 JVM con el flag:
 
-> ⚠️ **Estado (Fase 3c pendiente):** esa telemetría **viaja por el protocolo**, pero la
-> trayectoria experimental que hoy está validada es *in-process* (el runner importa el
-> orquestador, no habla con Java), así que la columna `saturation_factor` de los CSV sale
-> **vacía**. Ver [`docs/phase3_design.md`](docs/phase3_design.md) §9.
+> ✅ **Estado (Fase 3c implementada):** la telemetría **viaja por el protocolo** y ya está
+> verificada de extremo a extremo: `tools/run_integration.py` (y `tests/integration/`) lanzan
+> Java como proceso externo y comprueban que `saturationFactor` / `repeatCount` / `switchRate`
+> llegan a la trayectoria Python (`experiments/results/integration/*/data.csv`).
+> En la ruta **in-process** (`run_experiments.py`) la columna `saturation_factor` sigue saliendo
+> **vacía por diseño**: ese runner no habla con Java. Ver
+> [`docs/phase3_design.md`](docs/phase3_design.md) §9.
 
 **Windows** (desde `java_body\`):
 
@@ -225,8 +245,8 @@ java -DHART_TELEMETRY=true -cp ".:../lib/gson-2.13.1.jar:classes" CharacterBody
 ├── java_body/          # Agente físico (Java): CharacterBody, CognitiveSocketBridge, ...
 ├── orchestrator/       # Orquestador cognitivo (Python): orchestrator.py
 ├── hart_agent/         # Agente cognitivo (Rust + GGUF)
-├── tools/              # Runner reproducible de experiments (run_experiments.py)
-├── tests/              # Suite determinista (pytest): regresión + invariantes + contrato
+├── tools/              # Runners: run_experiments.py (in-process) y run_integration.py (TCP real)
+├── tests/              # Suite (pytest): unit/ (in-process) e integration/ (Java ↔ Python real)
 ├── models/             # Documentación de modelos GGUF (no subir archivos)
 ├── experiments/
 │   ├── configs/        # Estímulos reproducibles (JSON)
@@ -271,9 +291,9 @@ java -DHART_TELEMETRY=true -cp ".:../lib/gson-2.13.1.jar:classes" CharacterBody
   en cada push/PR — **sin descargar ningún GGUF**.
 - ✅ **Suite de regresión**: `tests/` convierte los 4 experimentos en regression tests
   (determinismo, invariantes, estado final y contrato del protocolo).
-- 🔜 **Fase 3c — integración TCP real**: única pieza funcional pendiente. Debe demostrar con
-  un test automatizado que `saturationFactor` / `repeatCount` / `switchRate` emitidos por Java
-  llegan al CSV de Python. Ver [`docs/phase3_design.md`](docs/phase3_design.md) §9.
+- ✅ **Fase 3c — integración TCP real**: `tools/run_integration.py` + `tests/integration/`
+  demuestran que `saturationFactor` / `repeatCount` / `switchRate` que genera Java llegan al CSV
+  de Python. Ver [`docs/phase3_design.md`](docs/phase3_design.md) §9.
 - **Versión GUI**: `SimulationWindow` (Java) ya existe; mejorarlo como visualizador del estado.
 - **Más experimentos**: cualquier dinámica afectiva nueva merece un `experiments/configs/*.json`
   (y su entrada correspondiente en `tests/test_regression_experiments.py`).

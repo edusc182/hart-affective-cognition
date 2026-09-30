@@ -2,7 +2,8 @@
 # CI — verificacion automatica del nucleo (sin GPU y SIN GGUF).
 #
 #   experiments : reproduce los 4 experimentos y valida CSV + summary
-#   tests       : suite determinista del orquestador (pytest)
+#   unit        : suite determinista in-process (pytest tests/unit)
+#   integration : Java <-> Python real bajo xvfb (pytest tests/integration + CLI)
 #   java        : javac -> java_body/classes (convencion unica)
 #   rust        : cargo check del agente cognitivo
 #
@@ -43,8 +44,8 @@ jobs:
           test "$count" -eq "$expected"
           echo "OK: $count experimentos con data.csv + summary.md"
 
-  tests:
-    name: Python - suite determinista (pytest)
+  unit:
+    name: Python - suite unitaria/regresion (in-process)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,8 +54,42 @@ jobs:
           python-version: "3.12"
       - name: Instalar pytest
         run: python -m pip install --upgrade pip pytest
-      - name: Ejecutar la suite
-        run: python -m pytest tests -q
+      - name: Ejecutar la suite in-process
+        run: python -m pytest tests/unit -q
+
+  integration:
+    name: Java <-> Python - integracion real (xvfb)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar xvfb + pytest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          python -m pip install --upgrade pip pytest
+      - name: Compilar el cuerpo Java
+        run: |
+          mkdir -p java_body/classes
+          javac -cp "lib/gson-2.13.1.jar" -d java_body/classes java_body/*.java
+      - name: Integracion real (con display -> RUN; sin display seria SKIP)
+        run: xvfb-run -a python -m pytest tests/integration -q
+      - name: Evidencia de la integracion (CLI)
+        run: xvfb-run -a python tools/run_integration.py --cycles 8
+      - name: Publicar la evidencia (CSV + summary)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-evidence
+          path: experiments/results/integration/
+          if-no-files-found: warn
 
   java:
     name: Java - compilacion del cuerpo

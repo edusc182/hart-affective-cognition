@@ -4,11 +4,11 @@
 
 ## Cómo probar antes de cambiar algo
 
-1. **Tests deterministas** (lo primero; no necesitan Java ni Rust):
+1. **Tests unitarios/regresion** (no necesitan Java ni Rust):
 
    ```sh
    python -m pip install -r requirements-dev.txt
-   python -m pytest tests -q
+   python -m pytest tests/unit -q
    ```
 
    La suite fija la **trayectoria** de los 4 experimentos (regresión) y comprueba los
@@ -22,9 +22,20 @@
    **Nunca** compiles "in place" (sin `-d`): genera `.class` junto a las fuentes y duplica
    la convención (es exactamente lo que `INIT_LIFE.bat` ya no hace).
 4. **(Opcional) Rust**: `cd hart_agent && cargo check` (los modelos GGUF NUNCA se suben).
+5. **Integracion real Java <-> Python** (Fase 3c): requiere JDK + clases compiladas + **display**.
+
+   ```sh
+   python -m pytest tests/integration -q      # display ausente -> skip explicito
+   python tools/run_integration.py --cycles 6 # evidencia en experiments/results/integration/
+   ```
+
+   Java se trata como **proceso externo** (no se importa ni se simula). Criterios:
+   display -> RUN, sin display -> SKIP, Java/TCP/telemetria mal -> **FAIL**.
+   La parada del proceso esta verificada: no deja JVM, ventana ni puerto huerfano.
 
 La CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) ejecuta esto mismo en cada
-push/PR: runner Python, suite pytest, `javac` y `cargo check`, **sin descargar ningún GGUF**.
+push/PR: experimentos reproducibles, `pytest tests/unit`, integracion bajo `xvfb-run`, `javac`
+y `cargo check`, **sin descargar ningún GGUF**.
 
 ## Reglas de oro
 

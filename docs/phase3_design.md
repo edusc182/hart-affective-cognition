@@ -14,23 +14,34 @@
 |----------|---------|--------|
 | **3a** | Runner + CSV (orquestador real *in-process*, LLM desactivado) | ✅ **Implementada y ejecutada** |
 | **3b** | Gráficas PNG + `summary.md` por experimento | ✅ **Implementada y ejecutada** |
-| **3c** | Integración TCP real (Java ↔ Python) como **validación automatizada** | ❌ **Único hueco funcional de la fase** |
+| **3c** | Integración TCP real (Java ↔ Python) como **validación automatizada** | ✅ **Implementada y ejecutada** (`tools/run_integration.py` + `tests/integration/`) |
 | **3d** | Telemetría de saturación (`saturationFactor`, `repeatCount`, `switchRate`) | ✅ **Implementada (opt-in)** |
 
-### 1.1 Precisión sobre 3c
+### 1.1 Estado del protocolo tras 3c
 
-El **protocolo** Java↔Python está **definido y alineado campo a campo** en ambos lados
-(verificado por `tests/test_protocol_contract.py`), y el flujo real existe: los dos procesos
-se hablan por TCP/JSON cuando se lanzan con `INIT_LIFE.bat`.
+Antes de 3c la situación era: **protocolo diseñado y mutuamente consistente** (sí) pero
+**integración ejecutada y verificada por un test** (**no**). Hoy ambas son **sí**:
 
-Lo que **no existe** es una prueba automatizada que demuestre el comportamiento del protocolo
-en ejecución real y capture su salida:
+- `tests/unit/test_protocol_contract.py` fija el contrato en ambos lados (fuentes Java +
+  consumidor Python).
+- `tests/integration/test_java_tcp_integration.py` **ejecuta el sistema completo**: lanza
+  `CharacterBody` como **proceso externo**, habla TCP/JSON, completa N ciclos y comprueba que
+  `saturationFactor` / `repeatCount` / `switchRate` que genera Java llegan a la trayectoria Python.
+- `tools/run_integration.py` es el harness reutilizable (también CLI) que produce esa evidencia
+  en `experiments/results/integration/`.
 
-- **protocolo diseñado y mutuamente consistente** … sí
-- **integración ejecutada y verificada por un test** … **no**
+Criterios, sin ambigüedad:
 
-La trayectoria experimental validada hoy es **in-process** (el runner importa el orquestador).
-Ese es el límite actual de la evidencia, y es exactamente lo que cierra la Fase 3c.
+```text
+display disponible  -> RUN
+display ausente     -> SKIP explicito (nunca pass silencioso)
+Java falla          -> FAIL
+TCP/protocolo falla -> FAIL
+telemetria ausente  -> FAIL
+```
+
+La trayectoria **in-process** (`tools/run_experiments.py`) sigue siendo la validación
+determinista sin Java y, **por diseño**, no habla con el cuerpo.
 
 ## 2. Objetivo
 
@@ -72,7 +83,7 @@ estado interno — sin volver a escribirlas.
 | `historical_inertia` | `compute_historical_inertia()` | ✅ |
 | `repeat_count` | observación del runner sobre la secuencia de acciones | ✅ |
 | `switch_rate` | observación del runner sobre la secuencia de acciones | ✅ |
-| `saturation_factor` | `FeedbackMessage.saturationFactor` (**solo Java**) | ⚠️ **vacía** *in-process* → cierra en **3c** |
+| `saturation_factor` | `FeedbackMessage.saturationFactor` (Java) | ✅ en la ruta de integración; ⚠️ vacía *in-process* **por diseño** (esa ruta no habla con Java) |
 | `thought` | `generate_internal_monologue()` (heurística sin LLM) | ✅ |
 | `rationale` | `feedback_payload["rationale"]` | ✅ |
 
@@ -144,47 +155,63 @@ la acción `"Explorar el entorno buscando nuevos estimulos"` en el ciclo 6 (sext
 con `repeat_count` reiniciado a 1. Estos valores están **fijados como regression tests** en
 `tests/test_regression_experiments.py`.
 
-## 9. Fase 3c — especificación pendiente (único hueco funcional)
+## 9. Fase 3c — implementada: integración TCP real
 
-Objetivo: cerrar la Fase 3 con **una prueba automatizada de la integración real**, no con más
-instrumentación.
+Objetivo cumplido: cerrar la Fase 3 con una **prueba automatizada de la integración real**
+(no con más instrumentación).
 
 ```text
-Python experiment/test
-       │  TCP/JSON
-       ▼
-CognitiveSocketBridge (Java)
-       │
-       ▼
-CharacterBody (Java)
-       │  FeedbackMessage
-       ▼
-orquestador Python
-       │
-       ▼
-experiments/results/<name>/data.csv  ← saturation_factor / repeat_count / switch_rate
+pytest (tests/integration)
+  │  precondiciones: JDK + clases compiladas + display (si falta algo -> SKIP)
+  ▼
+CharacterBody (PROCESO EXTERNO: nunca se importa ni se simula)
+  │  TCP/JSON
+  ▼
+tools/run_integration.py  (cliente acotado: timeouts + parada verificada)
+  │  responde `command` usando el CognitiveOrchestrator REAL
+  ▼
+FeedbackMessage (saturationFactor / repeatCount / switchRate)
+  │
+  ▼
+experiments/results/integration/<run>/data.csv + summary.md
 ```
 
-Entregables:
+Entregado:
 
-1. Un runner de integración (p. ej. `tools/run_integration.py`) que lance Java y Python como
-   procesos reales, espere la convergencia y **cierre todo de forma fiable** (sin ventanas
-   colgadas ni procesos huérfanos).
-2. Un test que **sustituya** a
-   `tests/test_protocol_contract.py::test_saturation_column_is_still_empty_in_the_in_process_trajectory`
-   (ese test existe precisamente para fallar cuando 3c aterrice) y compruebe que los valores de
-   `saturationFactor`, `repeatCount` y `switchRate` emitidos por Java aparecen en el CSV de
-   Python, coherentes con `repeat_count` / `switch_rate` observados por el runner.
+1. `tools/run_integration.py` — harness/CLI: arranque del proceso Java, timeout de arranque,
+   timeout de mensajes, parada verificada (nunca deja JVM/ventana/puerto huérfano) y escritura
+   de `data.csv` + `summary.md` con la evidencia.
+2. `tests/integration/test_java_tcp_integration.py` — 8 tests: ciclos completos, telemetría
+   presente y en rango, coincidencia protocolo↔stdout (`HART_TELEMETRY`), CSV escrito, puerto
+   liberado tras la parada, elección de una JVM real (no un lanzador) y FAIL explícito si la
+   telemetría falta.
+3. Se **mantiene** `tests/unit/test_protocol_contract.py::test_saturation_column_is_still_empty_in_the_in_process_trajectory`:
+   sigue siendo el marcador de que la ruta in-process no habla con Java; la ruta Java queda
+   cubierta por el test de integración.
 
-Criterios de aceptación:
+Evidencia medida (`python tools/run_integration.py --cycles 6`, JDK 21 Adoptium):
 
-- El test es determinista y **no requiere GPU ni GGUF**.
-- Si Java no puede arrancar en el entorno (p. ej. CI sin display), el test se marca como *skip*
-  explícito, nunca como *pass* silencioso.
-- La dinámica del orquestador **no cambia**: 3c solo observa (los regression tests del §8 deben
-  seguir pasando sin tocar sus valores esperados).
+| Ciclo | `saturationFactor` | `repeatCount` | `switchRate` | Δ afectivo de Java |
+|-------|--------------------|---------------|--------------|--------------------|
+| 1 | 1.00 | 1 | 0.00 | −0.12 |
+| 2 | 1.00 | 2 | 0.00 | −0.12 |
+| 3 | **0.75** | 3 | 0.00 | −0.09 |
+| 4 | **0.50** | 4 | 0.00 | **−0.06** |
+| 5 | 1.00 | 1 | 0.25 | +0.08 |
+| 6 | 1.00 | 2 | 0.20 | +0.08 |
 
-Restricciones: no se reescribe la lógica afectiva; la telemetría sigue siendo opt-in.
+Es decir: la saturación **existe y es medible** en la ruta real (la acción se repite 4 veces, el
+factor cae a 0.50 y el cambio afectivo se atenúa de −0.12 a −0.06), y llega a Python por el
+protocolo, coincidiendo con la línea `HART_TELEMETRY` de stdout.
+
+Hallazgo real de 3c (costó una regresión, queda documentado): en Windows
+`javapath\java.exe` es un **lanzador ejecutable**, no un symlink; terminar ese stub dejaba la JVM
+huérfana con su ventana y su puerto vivos. El harness ahora prefiere una JVM real, mata el árbol
+del proceso y cualquier PID que siga escuchando en el puerto, y **verifica** que el puerto quedó
+cerrado; `test_port_is_released_after_shutdown` vigila esa garantía.
+
+Restricciones respetadas: **no** se modificó ninguna fórmula del orquestador ni de Java; la
+telemetría sigue siendo opt-in (`-DHART_TELEMETRY=true`).
 
 ## 10. Evidencia de validez (regla de oro)
 
@@ -208,12 +235,15 @@ Restricciones: no se reescribe la lógica afectiva; la telemetría sigue siendo 
 ## 12. Cómo verificar este documento
 
 ```sh
-python -m pytest tests -q                                  # 94 tests (93 pasan, 1 skip)
-python tools/run_experiments.py --all --no-plots           # 4 CSV + summaries
+python -m pytest tests/unit -q                             # 94 tests in-process (93 pasan, 1 skip)
+python -m pytest tests/integration -q                      # 8 tests Java <-> Python (RUN si hay display)
+python tools/run_experiments.py --all --no-plots            # 4 CSV + summaries deterministas
+python tools/run_integration.py --cycles 6                  # evidencia de la integracion real
 javac -cp "lib/gson-2.13.1.jar" -d java_body/classes java_body/*.java
-cd hart_agent && cargo check                               # agente cognitivo (sin GGUF)
+cd hart_agent && cargo check                                # agente cognitivo (sin GGUF)
 ```
 
-La CI ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) ejecuta estos cuatro pasos en
-cada push/PR, **sin descargar ningún modelo GGUF**.
+La CI ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) ejecuta todo esto en cada
+push/PR, **sin descargar ningún modelo GGUF**: el job de integración usa `xvfb-run` para que
+haya display y la prueba realmente se ejecute (si no hubiera display, sería un *skip* explícito).
 
